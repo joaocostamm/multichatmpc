@@ -575,7 +575,7 @@ Special thanks to:
 
 <div align="center">
 
-**Made with ❤️ by [João Costa](https://github.com/joao-costa)**
+**Made with ❤️ by [João Costa](https://github.com/joaocostamm)**
 
 [⬆ Back to Top](#-multichat-mcp-server)
 
