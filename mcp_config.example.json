@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "whatsapp": {
+      "command": "/absolute/path/to/multichatmcp/app-build",
+      "args": [
+        "--messenger",
+        "whatsapp",
+        "--device",
+        "/absolute/path/to/mydevice.db",
+        "--log-level",
+        "info"
+      ]
+    }
+  }
+}
