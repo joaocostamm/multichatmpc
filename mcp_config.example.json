@@ -1,15 +1,27 @@
 {
   "mcpServers": {
     "whatsapp": {
-      "command": "/absolute/path/to/multichatmcp/app-build",
+      "command": "/absolute/path/to/multichatmcp/multichat",
       "args": [
         "--messenger",
         "whatsapp",
         "--device",
-        "/absolute/path/to/mydevice.db",
+        "/absolute/path/to/whatsapp.db",
+        "--log-level",
+        "info"
+      ]
+    },
+    "teams": {
+      "command": "/absolute/path/to/multichatmcp/multichat",
+      "args": [
+        "--messenger",
+        "teams",
+        "--device",
+        "/absolute/path/to/teams.db",
         "--log-level",
         "info"
       ]
     }
-  }
+  },
+  "_comment": "Each messenger can be configured separately. When you launch the MCP server with a specific --messenger flag, it will register only the operations available for that messenger type. WhatsApp has 7 operations, Teams might have 6 different operations, etc."
 }

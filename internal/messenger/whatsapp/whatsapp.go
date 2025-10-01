@@ -2,10 +2,14 @@ package whatsapp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	_ "github.com/mattn/go-sqlite3"
 	qrterminal "github.com/mdp/qrterminal/v3"
 	"github.com/rs/zerolog/log"
@@ -15,8 +19,6 @@ import (
 	"go.mau.fi/whatsmeow/types"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/protobuf/proto"
-
-	"github.com/joao-costa/multichatmcp/internal/messenger"
 )
 
 // WhatsAppMessenger implements the Messenger interface for WhatsApp
@@ -99,8 +101,13 @@ func (w *WhatsAppMessenger) Disconnect() error {
 	return nil
 }
 
+// GetMessengerName returns the name of the messenger platform
+func (w *WhatsAppMessenger) GetMessengerName() string {
+	return "whatsapp"
+}
+
 // SearchContacts searches for contacts by name or phone number
-func (w *WhatsAppMessenger) SearchContacts(ctx context.Context, query string) ([]messenger.Contact, error) {
+func (w *WhatsAppMessenger) searchContacts(ctx context.Context, query string) ([]Contact, error) {
 	if !w.IsConnected() {
 		return nil, fmt.Errorf("not connected to WhatsApp")
 	}
@@ -110,7 +117,7 @@ func (w *WhatsAppMessenger) SearchContacts(ctx context.Context, query string) ([
 		return nil, fmt.Errorf("failed to get contacts: %w", err)
 	}
 
-	var results []messenger.Contact
+	var results []Contact
 	query = strings.ToLower(query)
 
 	for jid, contact := range contacts {
@@ -118,7 +125,7 @@ func (w *WhatsAppMessenger) SearchContacts(ctx context.Context, query string) ([
 		phone := jid.User
 
 		if strings.Contains(name, query) || strings.Contains(phone, query) {
-			results = append(results, messenger.Contact{
+			results = append(results, Contact{
 				JID:         jid.String(),
 				PhoneNumber: phone,
 				Name:        contact.FullName,
@@ -129,8 +136,8 @@ func (w *WhatsAppMessenger) SearchContacts(ctx context.Context, query string) ([
 	return results, nil
 }
 
-// ListMessages retrieves messages with optional filters
-func (w *WhatsAppMessenger) ListMessages(ctx context.Context, filter messenger.MessageFilter) ([]messenger.Message, error) {
+// listMessages retrieves messages with optional filters
+func (w *WhatsAppMessenger) listMessages(ctx context.Context, filter MessageFilter) ([]Message, error) {
 	if !w.IsConnected() {
 		return nil, fmt.Errorf("not connected to WhatsApp")
 	}
@@ -140,11 +147,11 @@ func (w *WhatsAppMessenger) ListMessages(ctx context.Context, filter messenger.M
 	// This is a placeholder implementation
 	log.Warn().Msg("ListMessages: message history not fully implemented - requires custom message storage")
 
-	return []messenger.Message{}, nil
+	return []Message{}, nil
 }
 
-// ListChats lists available chats
-func (w *WhatsAppMessenger) ListChats(ctx context.Context, limit, page int) ([]messenger.Chat, error) {
+// listChats lists available chats
+func (w *WhatsAppMessenger) listChats(ctx context.Context, limit, page int) ([]Chat, error) {
 	if !w.IsConnected() {
 		return nil, fmt.Errorf("not connected to WhatsApp")
 	}
@@ -155,9 +162,9 @@ func (w *WhatsAppMessenger) ListChats(ctx context.Context, limit, page int) ([]m
 		return nil, fmt.Errorf("failed to get contacts: %w", err)
 	}
 
-	var chats []messenger.Chat
+	var chats []Chat
 	for jid, contact := range contacts {
-		chat := messenger.Chat{
+		chat := Chat{
 			JID:     jid.String(),
 			IsGroup: jid.Server == types.GroupServer,
 			Name:    contact.FullName,
@@ -173,7 +180,7 @@ func (w *WhatsAppMessenger) ListChats(ctx context.Context, limit, page int) ([]m
 	// Apply pagination
 	start := page * limit
 	if start >= len(chats) {
-		return []messenger.Chat{}, nil
+		return []Chat{}, nil
 	}
 
 	end := start + limit
@@ -184,8 +191,8 @@ func (w *WhatsAppMessenger) ListChats(ctx context.Context, limit, page int) ([]m
 	return chats[start:end], nil
 }
 
-// GetChat gets information about a specific chat
-func (w *WhatsAppMessenger) GetChat(ctx context.Context, chatJID string) (*messenger.Chat, error) {
+// getChat gets information about a specific chat
+func (w *WhatsAppMessenger) getChat(ctx context.Context, chatJID string) (*Chat, error) {
 	if !w.IsConnected() {
 		return nil, fmt.Errorf("not connected to WhatsApp")
 	}
@@ -195,7 +202,7 @@ func (w *WhatsAppMessenger) GetChat(ctx context.Context, chatJID string) (*messe
 		return nil, fmt.Errorf("invalid JID: %w", err)
 	}
 
-	chat := &messenger.Chat{
+	chat := &Chat{
 		JID:     jid.String(),
 		IsGroup: jid.Server == types.GroupServer,
 	}
@@ -210,8 +217,8 @@ func (w *WhatsAppMessenger) GetChat(ctx context.Context, chatJID string) (*messe
 	return chat, nil
 }
 
-// GetDirectChatByContact finds a direct chat with a specific contact
-func (w *WhatsAppMessenger) GetDirectChatByContact(ctx context.Context, phoneNumber string) (*messenger.Chat, error) {
+// getDirectChatByContact finds a direct chat with a specific contact
+func (w *WhatsAppMessenger) getDirectChatByContact(ctx context.Context, phoneNumber string) (*Chat, error) {
 	if !w.IsConnected() {
 		return nil, fmt.Errorf("not connected to WhatsApp")
 	}
@@ -225,26 +232,26 @@ func (w *WhatsAppMessenger) GetDirectChatByContact(ctx context.Context, phoneNum
 	}, phoneNumber)
 
 	jid := types.NewJID(phone, types.DefaultUserServer)
-	return w.GetChat(ctx, jid.String())
+	return w.getChat(ctx, jid.String())
 }
 
-// GetContactChats lists all chats involving a specific contact
-func (w *WhatsAppMessenger) GetContactChats(ctx context.Context, contactJID string) ([]messenger.Chat, error) {
+// getContactChats lists all chats involving a specific contact
+func (w *WhatsAppMessenger) getContactChats(ctx context.Context, contactJID string) ([]Chat, error) {
 	if !w.IsConnected() {
 		return nil, fmt.Errorf("not connected to WhatsApp")
 	}
 
 	// For direct messages, just return the direct chat
-	chat, err := w.GetChat(ctx, contactJID)
+	chat, err := w.getChat(ctx, contactJID)
 	if err != nil {
 		return nil, err
 	}
 
-	return []messenger.Chat{*chat}, nil
+	return []Chat{*chat}, nil
 }
 
-// SendMessage sends a message to a chat
-func (w *WhatsAppMessenger) SendMessage(ctx context.Context, recipient, message string) error {
+// sendMessage sends a message to a chat
+func (w *WhatsAppMessenger) sendMessage(ctx context.Context, recipient, message string) error {
 	if !w.IsConnected() {
 		return fmt.Errorf("not connected to WhatsApp")
 	}
@@ -285,4 +292,320 @@ func (w *WhatsAppMessenger) SendMessage(ctx context.Context, recipient, message 
 // IsConnected returns the connection status
 func (w *WhatsAppMessenger) IsConnected() bool {
 	return w.client != nil && w.client.IsConnected()
+}
+
+// RegisterMCPTools registers WhatsApp-specific MCP tools
+func (w *WhatsAppMessenger) RegisterMCPTools(mcpServer *server.MCPServer) {
+	// search_contacts
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "search_contacts",
+		Description: "Search for contacts by name or phone number",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"query": map[string]interface{}{
+					"type":        "string",
+					"description": "Search term to match against contact names or phone numbers",
+				},
+			},
+			Required: []string{"query"},
+		},
+	}, w.handleSearchContacts)
+
+	// list_messages
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "list_messages",
+		Description: "Retrieve messages with optional filters (e.g. time, sender) and context",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"after": map[string]interface{}{
+					"type":        "string",
+					"description": "ISO-8601 formatted date to only return messages after this date",
+				},
+				"before": map[string]interface{}{
+					"type":        "string",
+					"description": "ISO-8601 formatted date to only return messages before this date",
+				},
+				"sender_jid": map[string]interface{}{
+					"type":        "string",
+					"description": "Filter messages by sender JID",
+				},
+				"chat_jid": map[string]interface{}{
+					"type":        "string",
+					"description": "Filter messages by chat JID",
+				},
+				"query": map[string]interface{}{
+					"type":        "string",
+					"description": "Search term to filter messages by content",
+				},
+				"limit": map[string]interface{}{
+					"type":        "integer",
+					"description": "Maximum number of messages to return",
+					"default":     20,
+				},
+				"page": map[string]interface{}{
+					"type":        "integer",
+					"description": "Page number for pagination",
+					"default":     0,
+				},
+			},
+		},
+	}, w.handleListMessages)
+
+	// list_chats
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "list_chats",
+		Description: "List available chats with metadata (name, JID, last message)",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"limit": map[string]interface{}{
+					"type":        "integer",
+					"description": "Maximum number of chats to return",
+					"default":     20,
+				},
+				"page": map[string]interface{}{
+					"type":        "integer",
+					"description": "Page number for pagination",
+					"default":     0,
+				},
+			},
+		},
+	}, w.handleListChats)
+
+	// get_chat
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "get_chat",
+		Description: "Get information about a specific chat (metadata, messages)",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"chat_jid": map[string]interface{}{
+					"type":        "string",
+					"description": "The JID of the chat to retrieve",
+				},
+			},
+			Required: []string{"chat_jid"},
+		},
+	}, w.handleGetChat)
+
+	// get_direct_chat_by_contact
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "get_direct_chat_by_contact",
+		Description: "Find a direct chat with a specific contact by phone number",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"phone_number": map[string]interface{}{
+					"type":        "string",
+					"description": "Phone number of the contact (with country code, no + or spaces)",
+				},
+			},
+			Required: []string{"phone_number"},
+		},
+	}, w.handleGetDirectChatByContact)
+
+	// get_contact_chats
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "get_contact_chats",
+		Description: "List all chats involving a specific contact",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"contact_jid": map[string]interface{}{
+					"type":        "string",
+					"description": "The JID of the contact",
+				},
+			},
+			Required: []string{"contact_jid"},
+		},
+	}, w.handleGetContactChats)
+
+	// send_message
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "send_message",
+		Description: "Send a WhatsApp message to a specified phone number or group JID",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]interface{}{
+				"recipient": map[string]interface{}{
+					"type":        "string",
+					"description": "Phone number (with country code) or JID of the recipient",
+				},
+				"message": map[string]interface{}{
+					"type":        "string",
+					"description": "The message text to send",
+				},
+			},
+			Required: []string{"recipient", "message"},
+		},
+	}, w.handleSendMessage)
+}
+
+// Tool handlers
+
+func (w *WhatsAppMessenger) handleSearchContacts(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		Query string `json:"query"`
+	}
+	argsBytes, _ := json.Marshal(request.Params.Arguments)
+	if err := json.Unmarshal(argsBytes, &args); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("invalid arguments: %v", err)), nil
+	}
+
+	contacts, err := w.searchContacts(ctx, args.Query)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("search failed: %v", err)), nil
+	}
+
+	result, _ := json.Marshal(contacts)
+	return mcp.NewToolResultText(string(result)), nil
+}
+
+func (w *WhatsAppMessenger) handleListMessages(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		After     string `json:"after"`
+		Before    string `json:"before"`
+		SenderJID string `json:"sender_jid"`
+		ChatJID   string `json:"chat_jid"`
+		Query     string `json:"query"`
+		Limit     int    `json:"limit"`
+		Page      int    `json:"page"`
+	}
+	argsBytes, _ := json.Marshal(request.Params.Arguments)
+	if err := json.Unmarshal(argsBytes, &args); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("invalid arguments: %v", err)), nil
+	}
+
+	if args.Limit == 0 {
+		args.Limit = 20
+	}
+
+	filter := MessageFilter{
+		SenderJID: args.SenderJID,
+		ChatJID:   args.ChatJID,
+		Query:     args.Query,
+		Limit:     args.Limit,
+		Page:      args.Page,
+	}
+
+	if args.After != "" {
+		t, err := time.Parse(time.RFC3339, args.After)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("invalid after date: %v", err)), nil
+		}
+		filter.After = &t
+	}
+
+	if args.Before != "" {
+		t, err := time.Parse(time.RFC3339, args.Before)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("invalid before date: %v", err)), nil
+		}
+		filter.Before = &t
+	}
+
+	messages, err := w.listMessages(ctx, filter)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("list messages failed: %v", err)), nil
+	}
+
+	result, _ := json.Marshal(messages)
+	return mcp.NewToolResultText(string(result)), nil
+}
+
+func (w *WhatsAppMessenger) handleListChats(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	}
+	argsBytes, _ := json.Marshal(request.Params.Arguments)
+	if err := json.Unmarshal(argsBytes, &args); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("invalid arguments: %v", err)), nil
+	}
+
+	if args.Limit == 0 {
+		args.Limit = 20
+	}
+
+	chats, err := w.listChats(ctx, args.Limit, args.Page)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("list chats failed: %v", err)), nil
+	}
+
+	result, _ := json.Marshal(chats)
+	return mcp.NewToolResultText(string(result)), nil
+}
+
+func (w *WhatsAppMessenger) handleGetChat(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		ChatJID string `json:"chat_jid"`
+	}
+	argsBytes, _ := json.Marshal(request.Params.Arguments)
+	if err := json.Unmarshal(argsBytes, &args); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("invalid arguments: %v", err)), nil
+	}
+
+	chat, err := w.getChat(ctx, args.ChatJID)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("get chat failed: %v", err)), nil
+	}
+
+	result, _ := json.Marshal(chat)
+	return mcp.NewToolResultText(string(result)), nil
+}
+
+func (w *WhatsAppMessenger) handleGetDirectChatByContact(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		PhoneNumber string `json:"phone_number"`
+	}
+	argsBytes, _ := json.Marshal(request.Params.Arguments)
+	if err := json.Unmarshal(argsBytes, &args); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("invalid arguments: %v", err)), nil
+	}
+
+	chat, err := w.getDirectChatByContact(ctx, args.PhoneNumber)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("get direct chat failed: %v", err)), nil
+	}
+
+	result, _ := json.Marshal(chat)
+	return mcp.NewToolResultText(string(result)), nil
+}
+
+func (w *WhatsAppMessenger) handleGetContactChats(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		ContactJID string `json:"contact_jid"`
+	}
+	argsBytes, _ := json.Marshal(request.Params.Arguments)
+	if err := json.Unmarshal(argsBytes, &args); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("invalid arguments: %v", err)), nil
+	}
+
+	chats, err := w.getContactChats(ctx, args.ContactJID)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("get contact chats failed: %v", err)), nil
+	}
+
+	result, _ := json.Marshal(chats)
+	return mcp.NewToolResultText(string(result)), nil
+}
+
+func (w *WhatsAppMessenger) handleSendMessage(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var args struct {
+		Recipient string `json:"recipient"`
+		Message   string `json:"message"`
+	}
+	argsBytes, _ := json.Marshal(request.Params.Arguments)
+	if err := json.Unmarshal(argsBytes, &args); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("invalid arguments: %v", err)), nil
+	}
+
+	err := w.sendMessage(ctx, args.Recipient, args.Message)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("send message failed: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText("Message sent successfully"), nil
 }

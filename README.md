@@ -21,15 +21,17 @@
 
 ## 🎯 What is MultiChat MCP?
 
-MultiChat MCP Server is a powerful Go-based implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) that enables AI assistants like Claude, GPT, and others to seamlessly interact with your messaging platforms. Start with WhatsApp and expand to Telegram, Signal, and more with our modular architecture.
+MultiChat MCP Server is a powerful Go-based implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) that enables AI assistants like Claude, GPT, and others to seamlessly interact with your messaging platforms. Start with WhatsApp and expand to Teams, Telegram, Signal, and more with our **messenger-specific operations architecture**.
 
 ### Why MultiChat MCP?
 
 - 🤖 **AI-Native**: Built specifically for AI assistants to read and send messages
 - 🔌 **Plug & Play**: Easy integration with Claude Desktop, Cursor, and any MCP-compatible client
-- 🧩 **Modular Design**: Clean interface makes adding new platforms straightforward
+- 🧩 **Truly Modular**: Each messenger defines its own operations - no forced common interface
+- 🎯 **Platform-Specific**: Each messenger exposes only the operations that make sense for that platform
 - 🔒 **Privacy First**: Your data stays on your machine
 - ⚡ **Lightning Fast**: Written in Go for optimal performance
+- 🔧 **Dynamic**: MCP tools are registered at runtime based on the selected messenger
 
 ---
 
@@ -40,20 +42,23 @@ MultiChat MCP Server is a powerful Go-based implementation of the [Model Context
 <td width="50%">
 
 ### 📱 Platform Support
-- ✅ **WhatsApp** (via [whatsmeow](https://github.com/tulir/whatsmeow))
-- 🔜 Telegram (coming soon)
-- 🔜 Signal (coming soon)
-- 🔜 Discord (planned)
+- ✅ **WhatsApp** - 7 operations (via [whatsmeow](https://github.com/tulir/whatsmeow))
+- 🔜 **Teams** - Custom operations for channels & meetings
+- 🔜 **Telegram** - Platform-specific tools (polls, forwards, etc.)
+- 🔜 **Signal** - Secure messaging operations
+- 🔜 **Discord** - Server/channel management
+
+*Each platform has its own unique set of MCP operations*
 
 </td>
 <td width="50%">
 
-### 🛠️ Core Capabilities
-- 💬 Send & receive messages
-- 👥 Contact & chat management
-- 🔍 Full-text message search
-- 📊 Pagination & filtering
-- 🕐 Time-based queries
+### 🛠️ Architecture Capabilities
+- 🔧 **Messenger-specific operations** - Each platform defines its own tools
+- 🔌 **Dynamic MCP registration** - Tools registered at runtime
+- 🧩 **Minimal interface** - No forced abstractions
+- 🎯 **Platform isolation** - Independent implementations
+- 📦 **Type safety** - Platform-specific types
 
 </td>
 </tr>
@@ -170,7 +175,9 @@ Flags:
 
 ---
 
-## 🔧 Available MCP Tools
+## 🔧 Available MCP Tools (WhatsApp)
+
+When running with `--messenger whatsapp`, the following MCP tools are available:
 
 ### 👤 `search_contacts`
 Find contacts by name or phone number.
@@ -274,7 +281,7 @@ Send a message to any contact or group.
 
 ## 🏗️ Architecture
 
-MultiChat MCP follows a clean, modular architecture designed for extensibility:
+MultiChat MCP follows a clean, modular architecture designed for extensibility with **messenger-specific operations**:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -283,12 +290,16 @@ MultiChat MCP follows a clean, modular architecture designed for extensibility:
                  │ MCP Protocol (stdio)
 ┌────────────────▼────────────────────────┐
 │         MCP Server (server.go)          │
+│   (Dynamically registers messenger      │
+│    tools at runtime)                    │
 └────────────────┬────────────────────────┘
-                 │ Messenger Interface
+                 │ Minimal Messenger Interface
 ┌────────────────▼────────────────────────┐
 │  Platform Implementations (modular)     │
+│  Each defines its OWN MCP operations    │
 ├─────────────────────────────────────────┤
-│  ✅ WhatsApp  │  🔜 Telegram  │  🔜 Signal │
+│  ✅ WhatsApp  │  🔜 Teams  │  🔜 Telegram │
+│  (7 tools)   │  (6 tools) │  (8 tools)   │
 └─────────────────────────────────────────┘
 ```
 
@@ -299,11 +310,12 @@ multichatmcp/
 ├── main.go                      # Entry point & CLI
 ├── internal/
 │   ├── messenger/
-│   │   ├── interface.go         # Messenger interface definition
+│   │   ├── interface.go         # Minimal messenger interface
 │   │   └── whatsapp/
-│   │       └── whatsapp.go      # WhatsApp implementation
+│   │       ├── whatsapp.go      # WhatsApp implementation + MCP tools
+│   │       └── types.go         # WhatsApp-specific types
 │   └── mcp/
-│       └── server.go            # MCP server implementation
+│       └── server.go            # Generic MCP server
 ├── go.mod                       # Go dependencies
 ├── Makefile                     # Build automation
 └── README.md                    # This file
@@ -311,18 +323,76 @@ multichatmcp/
 
 ### Key Design Principles
 
-1. **Interface-Driven**: All platforms implement a common `Messenger` interface
-2. **Dependency Injection**: Platform implementations are injected into MCP server
-3. **Separation of Concerns**: CLI, MCP layer, and platform logic are isolated
-4. **Extensibility**: Adding new platforms requires minimal changes
+1. **Messenger-Specific Operations**: Each messenger platform registers its own unique set of MCP tools - there is **no common interface** for operations
+2. **Minimal Interface**: The `Messenger` interface only requires `Connect()`, `Disconnect()`, `IsConnected()`, `GetMessengerName()`, and `RegisterMCPTools()`
+3. **Dynamic Tool Registration**: MCP tools are registered at runtime based on the selected messenger type
+4. **Platform Isolation**: Each messenger implementation is completely independent with its own types and operations
+5. **Extensibility**: Adding new platforms means implementing new operations specific to that platform's capabilities
+
+### Architecture Benefits
+
+This **messenger-specific operations** architecture provides several key advantages:
+
+#### ✅ True Platform Independence
+Each messenger can expose operations that make sense for **that platform only**:
+- WhatsApp has JID-based operations (`get_chat`, `get_direct_chat_by_contact`)
+- Teams might have channel/meeting operations (`create_meeting`, `list_channels`)
+- Telegram could have poll/forward operations (`create_poll`, `forward_message`)
+
+#### ✅ No Forced Abstractions
+Platforms aren't forced to implement operations that don't make sense:
+- A read-only analytics platform doesn't need `send_message`
+- A simple notification service doesn't need complex chat management
+- Each platform exposes exactly what it can do
+
+#### ✅ Easy Evolution
+Add new operations to specific platforms without affecting others:
+- Add `create_poll` to Telegram without touching WhatsApp
+- Implement `schedule_meeting` for Teams only
+- Update one platform's types without breaking others
+
+#### ✅ Runtime Flexibility
+The MCP server automatically adapts to show only the operations available for the selected messenger:
+```bash
+# WhatsApp operations only
+./multichat --messenger whatsapp
+
+# Teams operations only
+./multichat --messenger teams
+
+# Each shows completely different MCP tools
+```
 
 ---
 
 ## 🧩 Adding New Messaging Platforms
 
-Want to add Telegram, Signal, or another platform? Here's how:
+Want to add Teams, Telegram, Signal, or another platform? Each platform can define its own unique set of operations!
 
-### Step 1: Implement the Interface
+### Step 1: Define Platform-Specific Types
+
+Create `internal/messenger/<platform>/types.go`:
+
+```go
+package platform
+
+// Define your platform-specific types
+type Contact struct {
+    ID   string `json:"id"`
+    Name string `json:"name"`
+    // Platform-specific fields
+}
+
+type Message struct {
+    ID      string `json:"id"`
+    Content string `json:"content"`
+    // Platform-specific fields
+}
+
+// Add any platform-specific types you need
+```
+
+### Step 2: Implement the Minimal Interface
 
 Create `internal/messenger/<platform>/<platform>.go`:
 
@@ -331,46 +401,98 @@ package platform
 
 import (
     "context"
-    "github.com/joao-costa/multichatmcp/internal/messenger"
+    "encoding/json"
+    "fmt"
+
+    "github.com/mark3labs/mcp-go/mcp"
+    "github.com/mark3labs/mcp-go/server"
 )
 
 type PlatformMessenger struct {
-    // Your implementation
+    // Your platform-specific client and state
 }
 
-func NewPlatformMessenger(config string) (messenger.Messenger, error) {
+func NewPlatformMessenger(config string) (*PlatformMessenger, error) {
     // Initialize your messenger
 }
 
-// Implement all messenger.Messenger interface methods:
-// - Connect(ctx context.Context) error
-// - Disconnect() error
-// - SearchContacts(ctx context.Context, query string) ([]Contact, error)
-// - ListMessages(ctx context.Context, filter MessageFilter) ([]Message, error)
-// - ListChats(ctx context.Context, limit, page int) ([]Chat, error)
-// - GetChat(ctx context.Context, chatJID string) (*Chat, error)
-// - GetDirectChatByContact(ctx context.Context, phoneNumber string) (*Chat, error)
-// - GetContactChats(ctx context.Context, contactJID string) ([]Chat, error)
-// - SendMessage(ctx context.Context, recipient, message string) error
-// - IsConnected() bool
+// Implement the minimal required methods:
+
+func (p *PlatformMessenger) Connect(ctx context.Context) error {
+    // Connect to your platform
+}
+
+func (p *PlatformMessenger) Disconnect() error {
+    // Disconnect from your platform
+}
+
+func (p *PlatformMessenger) IsConnected() bool {
+    // Return connection status
+}
+
+func (p *PlatformMessenger) GetMessengerName() string {
+    return "platform-name" // e.g., "teams", "telegram"
+}
+
+// This is where you define YOUR platform's operations!
+func (p *PlatformMessenger) RegisterMCPTools(mcpServer *server.MCPServer) {
+    // Register ONLY the operations that make sense for your platform
+
+    // Example: Teams might have channel operations
+    mcpServer.AddTool(mcp.Tool{
+        Name:        "list_channels",
+        Description: "List all Teams channels",
+        InputSchema: mcp.ToolInputSchema{
+            Type: "object",
+            Properties: map[string]interface{}{
+                "team_id": map[string]interface{}{
+                    "type":        "string",
+                    "description": "The ID of the team",
+                },
+            },
+            Required: []string{"team_id"},
+        },
+    }, p.handleListChannels)
+
+    // Add more platform-specific tools...
+}
+
+// Implement your tool handlers
+func (p *PlatformMessenger) handleListChannels(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+    // Handle the operation
+}
 ```
 
-### Step 2: Register in Main
+### Step 3: Register in Main
 
 Add to the switch statement in `main.go`:
 
 ```go
+case "teams":
+    msg, err = teams.NewTeamsMessenger(deviceDB)
 case "telegram":
     msg, err = telegram.NewTelegramMessenger(deviceDB)
-case "signal":
-    msg, err = signal.NewSignalMessenger(deviceDB)
 ```
 
-### Step 3: Test & Document
+### Step 4: Test & Document
 
-- Add tests for your implementation
-- Update README with platform-specific setup
+- Test your platform-specific operations
+- Update README with your platform's available MCP tools
+- Document any platform-specific setup requirements
 - Submit a PR! 🎉
+
+### Example: Different Platforms, Different Operations
+
+**WhatsApp** (7 operations):
+- `search_contacts`, `list_messages`, `list_chats`, `get_chat`, `get_direct_chat_by_contact`, `get_contact_chats`, `send_message`
+
+**Teams** (hypothetical 6 operations):
+- `list_teams`, `list_channels`, `list_members`, `send_channel_message`, `create_meeting`, `get_channel_info`
+
+**Telegram** (hypothetical 8 operations):
+- `list_chats`, `send_message`, `create_poll`, `pin_message`, `forward_message`, `get_chat_history`, `search_global`, `get_user_info`
+
+Each platform implements **only what makes sense** for that platform!
 
 ---
 
