@@ -14,14 +14,19 @@ import (
 	"github.com/joao-costa/multichatmcp/internal/mcp"
 	"github.com/joao-costa/multichatmcp/internal/messenger"
 	"github.com/joao-costa/multichatmcp/internal/messenger/teams"
+	"github.com/joao-costa/multichatmcp/internal/messenger/twitter"
 	"github.com/joao-costa/multichatmcp/internal/messenger/whatsapp"
 )
 
 var (
-	messengerType string
-	deviceDB      string
-	webhookURL    string
-	logLevel      string
+	messengerType      string
+	deviceDB           string
+	webhookURL         string
+	twitterAPIKey      string
+	twitterAPISecret   string
+	twitterToken       string
+	twitterTokenSecret string
+	logLevel           string
 )
 
 var rootCmd = &cobra.Command{
@@ -32,9 +37,13 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().StringVar(&messengerType, "messenger", "whatsapp", "Messenger type (whatsapp, teams)")
+	rootCmd.Flags().StringVar(&messengerType, "messenger", "whatsapp", "Messenger type (whatsapp, teams, twitter)")
 	rootCmd.Flags().StringVar(&deviceDB, "device", "device.db", "Device database file path (for WhatsApp)")
 	rootCmd.Flags().StringVar(&webhookURL, "webhook", "", "Webhook URL (for Teams)")
+	rootCmd.Flags().StringVar(&twitterAPIKey, "twitter-api-key", "", "Twitter API Key (for Twitter/X)")
+	rootCmd.Flags().StringVar(&twitterAPISecret, "twitter-api-secret", "", "Twitter API Secret Key (for Twitter/X)")
+	rootCmd.Flags().StringVar(&twitterToken, "twitter-token", "", "Twitter Access Token (for Twitter/X)")
+	rootCmd.Flags().StringVar(&twitterTokenSecret, "twitter-token-secret", "", "Twitter Access Token Secret (for Twitter/X)")
 	rootCmd.Flags().StringVar(&logLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 }
 
@@ -61,6 +70,11 @@ func run(cmd *cobra.Command, args []string) error {
 		msg, err = teams.NewTeamsMessenger(webhookURL)
 		if err != nil {
 			return fmt.Errorf("failed to create Teams messenger: %w", err)
+		}
+	case "twitter":
+		msg, err = twitter.NewTwitterMessenger(twitterAPIKey, twitterAPISecret, twitterToken, twitterTokenSecret)
+		if err != nil {
+			return fmt.Errorf("failed to create Twitter/X messenger: %w", err)
 		}
 	default:
 		return fmt.Errorf("unsupported messenger type: %s", messengerType)

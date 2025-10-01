@@ -44,6 +44,7 @@ MultiChat MCP Server is a powerful Go-based implementation of the [Model Context
 ### 📱 Platform Support
 - ✅ **WhatsApp** - 7 operations (via [whatsmeow](https://github.com/tulir/whatsmeow))
 - ✅ **Teams** - 3 operations (via [go-teams-notify](https://github.com/atc0005/go-teams-notify))
+- ✅ **Twitter/X** - 3 operations (via [gotwi](https://github.com/michimani/gotwi))
 - 🔜 **Telegram** - Platform-specific tools (polls, forwards, etc.)
 - 🔜 **Signal** - Secure messaging operations
 - 🔜 **Discord** - Server/channel management
@@ -119,6 +120,29 @@ make install
 2. Run the server with your webhook URL
 3. The webhook URL can also be provided per-message for multi-channel support
 
+#### Twitter/X Setup
+
+```bash
+./multichat --messenger twitter \
+  --twitter-api-key "your-api-key" \
+  --twitter-api-secret "your-api-secret" \
+  --twitter-token "your-access-token" \
+  --twitter-token-secret "your-access-token-secret" \
+  --log-level debug
+```
+
+**🔑 Twitter API Credentials Setup:**
+1. Go to [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard)
+2. Create a new project and app (or use existing)
+3. Navigate to your app's **Keys and Tokens** section
+4. Generate or retrieve:
+   - API Key (also called Consumer Key)
+   - API Secret Key (also called Consumer Secret)
+   - Access Token
+   - Access Token Secret
+5. Ensure your app has **Read and Write** permissions to post tweets
+6. Use the credentials with the flags above
+
 ---
 
 ## 📖 Documentation
@@ -129,11 +153,15 @@ make install
 ./multichat [flags]
 
 Flags:
-  --messenger string    Messaging platform to use: whatsapp, teams (default "whatsapp")
-  --device string       Device database file path (for WhatsApp) (default "device.db")
-  --webhook string      Webhook URL (for Teams) (optional, can be provided per-message)
-  --log-level string    Logging level: debug, info, warn, error (default "info")
-  -h, --help           Show help information
+  --messenger string           Messaging platform to use: whatsapp, teams, twitter (default "whatsapp")
+  --device string             Device database file path (for WhatsApp) (default "device.db")
+  --webhook string            Webhook URL (for Teams) (optional, can be provided per-message)
+  --twitter-api-key string    Twitter API Key (for Twitter/X)
+  --twitter-api-secret string Twitter API Secret Key (for Twitter/X)
+  --twitter-token string      Twitter Access Token (for Twitter/X)
+  --twitter-token-secret string Twitter Access Token Secret (for Twitter/X)
+  --log-level string          Logging level: debug, info, warn, error (default "info")
+  -h, --help                  Show help information
 ```
 
 ### MCP Client Configuration
@@ -160,6 +188,17 @@ Flags:
       "args": [
         "--messenger", "teams",
         "--webhook", "https://your-teams-webhook-url",
+        "--log-level", "info"
+      ]
+    },
+    "twitter": {
+      "command": "/absolute/path/to/multichat",
+      "args": [
+        "--messenger", "twitter",
+        "--twitter-api-key", "your-api-key",
+        "--twitter-api-secret", "your-api-secret",
+        "--twitter-token", "your-access-token",
+        "--twitter-token-secret", "your-access-token-secret",
         "--log-level", "info"
       ]
     }
@@ -362,6 +401,60 @@ Validate a Teams webhook URL to ensure it's properly formatted.
 
 ---
 
+### Twitter/X Tools
+
+When running with `--messenger twitter`, the following MCP tools are available:
+
+#### 🐦 `post_tweet`
+Post a tweet to Twitter/X (max 280 characters).
+
+```json
+{
+  "text": "Hello from MultiChat MCP! 🚀",
+  "reply_to_tweet_id": "1234567890123456789"
+}
+```
+
+**Parameters:**
+- `text` *(string, required)*: The text content of the tweet (max 280 characters)
+- `reply_to_tweet_id` *(string, optional)*: ID of the tweet to reply to (creates a reply thread)
+
+**Returns:** `{"tweet_id": "...", "text": "...", "success": true}`
+
+#### 📤 `send_message`
+Send a message (tweet) to Twitter/X - alias for `post_tweet` to maintain consistency with other messengers.
+
+```json
+{
+  "message": "Just posted via MCP! 🎉",
+  "reply_to_tweet_id": "1234567890123456789"
+}
+```
+
+**Parameters:**
+- `message` *(string, required)*: The text content of the tweet (max 280 characters)
+- `reply_to_tweet_id` *(string, optional)*: ID of the tweet to reply to
+
+**Returns:** `{"tweet_id": "...", "text": "...", "success": true}`
+
+#### 🗑️ `delete_tweet`
+Delete a tweet by ID.
+
+```json
+{
+  "tweet_id": "1234567890123456789"
+}
+```
+
+**Parameters:**
+- `tweet_id` *(string, required)*: The ID of the tweet to delete
+
+**Returns:** `{"success": true, "tweet_id": "...", "message": "Tweet deleted successfully"}`
+
+**Note:** You can only delete tweets posted by the authenticated account.
+
+---
+
 ### Teams Webhook Setup
 
 To use Teams integration, you need to create a Power Automate Workflow webhook URL. Microsoft has deprecated the old O365 connectors (retiring October 2024), so you must use Power Automate workflows.
@@ -435,10 +528,10 @@ MultiChat MCP follows a clean, modular architecture designed for extensibility w
 ┌────────────────▼────────────────────────┐
 │  Platform Implementations (modular)     │
 │  Each defines its OWN MCP operations    │
-├─────────────────────────────────────────┤
-│  ✅ WhatsApp  │  ✅ Teams  │  🔜 Telegram │
-│  (7 tools)   │  (3 tools) │  (8 tools)   │
-└─────────────────────────────────────────┘
+├──────────────────────────────────────────────────┤
+│  ✅ WhatsApp │ ✅ Teams  │ ✅ Twitter/X │ 🔜 Telegram │
+│  (7 tools)  │ (3 tools) │  (3 tools)   │  (8 tools)  │
+└──────────────────────────────────────────────────┘
 ```
 
 ### Project Structure
@@ -452,9 +545,12 @@ multichatmcp/
 │   │   ├── whatsapp/
 │   │   │   ├── whatsapp.go      # WhatsApp implementation + MCP tools
 │   │   │   └── types.go         # WhatsApp-specific types
-│   │   └── teams/
-│   │       ├── teams.go         # Teams implementation + MCP tools
-│   │       └── types.go         # Teams-specific types
+│   │   ├── teams/
+│   │   │   ├── teams.go         # Teams implementation + MCP tools
+│   │   │   └── types.go         # Teams-specific types
+│   │   └── twitter/
+│   │       ├── twitter.go       # Twitter/X implementation + MCP tools
+│   │       └── types.go         # Twitter/X-specific types
 │   └── mcp/
 │       └── server.go            # Generic MCP server
 ├── go.mod                       # Go dependencies
@@ -629,6 +725,9 @@ case "telegram":
 
 **Teams** (3 operations):
 - `send_message`, `send_rich_message`, `validate_webhook`
+
+**Twitter/X** (3 operations):
+- `post_tweet`, `send_message`, `delete_tweet`
 
 **Telegram** (hypothetical 8 operations):
 - `list_chats`, `send_message`, `create_poll`, `pin_message`, `forward_message`, `get_chat_history`, `search_global`, `get_user_info`
@@ -818,6 +917,7 @@ This project stands on the shoulders of giants:
 
 - **[whatsmeow](https://github.com/tulir/whatsmeow)** - Excellent WhatsApp Web multidevice library by [Tulir Asokan](https://github.com/tulir)
 - **[go-teams-notify](https://github.com/atc0005/go-teams-notify)** - Microsoft Teams notification library by [atc0005](https://github.com/atc0005)
+- **[gotwi](https://github.com/michimani/gotwi)** - Twitter API v2 library for Go by [michimani](https://github.com/michimani)
 - **[mcp-go](https://github.com/modelcontextprotocol/go-mcp)** - Official Go implementation of MCP by [Mark3Labs](https://github.com/mark3labs)
 - **[Cobra](https://github.com/spf13/cobra)** - Powerful CLI framework by [spf13](https://github.com/spf13)
 - **[zerolog](https://github.com/rs/zerolog)** - Fast structured logger by [Olivier Poitrey](https://github.com/rs)

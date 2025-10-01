@@ -16,12 +16,29 @@
       "args": [
         "--messenger",
         "teams",
-        "--device",
-        "/absolute/path/to/teams.db",
+        "--webhook",
+        "https://your-teams-webhook-url",
+        "--log-level",
+        "info"
+      ]
+    },
+    "twitter": {
+      "command": "/absolute/path/to/multichatmcp/multichat",
+      "args": [
+        "--messenger",
+        "twitter",
+        "--twitter-api-key",
+        "your-api-key",
+        "--twitter-api-secret",
+        "your-api-secret",
+        "--twitter-token",
+        "your-access-token",
+        "--twitter-token-secret",
+        "your-access-token-secret",
         "--log-level",
         "info"
       ]
     }
   },
-  "_comment": "Each messenger can be configured separately. When you launch the MCP server with a specific --messenger flag, it will register only the operations available for that messenger type. WhatsApp has 7 operations, Teams might have 6 different operations, etc."
+  "_comment": "Each messenger can be configured separately. When you launch the MCP server with a specific --messenger flag, it will register only the operations available for that messenger type. WhatsApp has 7 operations, Teams has 3 operations, Twitter/X has 3 operations, etc."
 }
