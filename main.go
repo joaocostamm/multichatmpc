@@ -85,7 +85,7 @@ func run(cmd *cobra.Command, args []string) error {
 		os.Exit(0)
 	}()
 
-	log.Info().Msg("Starting MCP server...")
+	log.Info().Msg("Starting MCP server (stdio transport)...")
 	if err := mcpServer.Serve(); err != nil {
 		return fmt.Errorf("MCP server error: %w", err)
 	}
@@ -119,4 +119,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-

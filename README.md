@@ -1,357 +1,582 @@
-# MultiChat MCP Server
+<div align="center">
 
-A multi-messenger MCP (Model Context Protocol) server implementation in Go. Currently supports WhatsApp with a modular architecture designed to support additional messaging platforms in the future.
+# 🚀 MultiChat MCP Server
 
-## Features
+**Bridge your messaging platforms with AI through the Model Context Protocol**
 
-- ✅ **WhatsApp Support** using [whatsmeow](https://github.com/tulir/whatsmeow)
-- ✅ **MCP Protocol** implementation using [mcp-go](https://github.com/modelcontextprotocol/go-mcp)
-- ✅ **CLI Interface** with [Cobra](https://github.com/spf13/cobra)
-- ✅ **Structured Logging** with [zerolog](https://github.com/rs/zerolog)
-- ✅ **Modular Architecture** for easy addition of new messaging platforms
+[![Go Version](https://img.shields.io/badge/Go-1.25.1+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-blue?style=for-the-badge)](https://modelcontextprotocol.io)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](CONTRIBUTING.md)
 
-## Installation
+[Features](#-features) •
+[Quick Start](#-quick-start) •
+[Documentation](#-documentation) •
+[Architecture](#-architecture) •
+[Contributing](#-contributing)
+
+</div>
+
+---
+
+## 🎯 What is MultiChat MCP?
+
+MultiChat MCP Server is a powerful Go-based implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) that enables AI assistants like Claude, GPT, and others to seamlessly interact with your messaging platforms. Start with WhatsApp and expand to Telegram, Signal, and more with our modular architecture.
+
+### Why MultiChat MCP?
+
+- 🤖 **AI-Native**: Built specifically for AI assistants to read and send messages
+- 🔌 **Plug & Play**: Easy integration with Claude Desktop, Cursor, and any MCP-compatible client
+- 🧩 **Modular Design**: Clean interface makes adding new platforms straightforward
+- 🔒 **Privacy First**: Your data stays on your machine
+- ⚡ **Lightning Fast**: Written in Go for optimal performance
+
+---
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 📱 Platform Support
+- ✅ **WhatsApp** (via [whatsmeow](https://github.com/tulir/whatsmeow))
+- 🔜 Telegram (coming soon)
+- 🔜 Signal (coming soon)
+- 🔜 Discord (planned)
+
+</td>
+<td width="50%">
+
+### 🛠️ Core Capabilities
+- 💬 Send & receive messages
+- 👥 Contact & chat management
+- 🔍 Full-text message search
+- 📊 Pagination & filtering
+- 🕐 Time-based queries
+
+</td>
+</tr>
+</table>
+
+### 🎨 Technology Stack
+
+- **[MCP Protocol](https://github.com/modelcontextprotocol/go-mcp)** - Standard protocol for AI-app communication
+- **[Cobra](https://github.com/spf13/cobra)** - Modern CLI framework
+- **[Zerolog](https://github.com/rs/zerolog)** - Zero-allocation structured logging
+- **[SQLite3](https://www.sqlite.org/)** - Lightweight session storage
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Go 1.25.1 or higher
-- SQLite3
+- **Go 1.25.1+** ([Download](https://golang.org/dl/))
+- **SQLite3** (usually pre-installed on macOS/Linux)
 
-### Build from Source
+### Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/joao-costa/multichatmcp.git
 cd multichatmcp
 
-# Download dependencies
-go mod download
-
-# Build the application
+# Build the binary
 make build
 
-# Or build directly with go
-go build -o multichat
-
-# Or install to GOPATH/bin
+# Or install directly to your GOPATH
 make install
 ```
 
-## Usage
-
-### First-Time Setup (WhatsApp)
-
-When running for the first time, the application will generate a QR code for WhatsApp authentication:
+### First Run - WhatsApp Setup
 
 ```bash
 ./multichat --messenger whatsapp --device mydevice.db --log-level debug
 ```
 
-1. Scan the QR code with your WhatsApp mobile app (Settings → Linked Devices → Link a Device)
-2. The session will be saved to `mydevice.db` for future use
-3. Subsequent runs will automatically reconnect using the saved session
+**🔐 Authentication Steps:**
+1. A QR code will appear in your terminal
+2. Open WhatsApp on your phone → **Settings** → **Linked Devices** → **Link a Device**
+3. Scan the QR code
+4. Done! Your session is saved for future use
 
-### Command-Line Arguments
+---
+
+## 📖 Documentation
+
+### Command-Line Usage
 
 ```bash
 ./multichat [flags]
 
 Flags:
-  --messenger string    Messenger type (default "whatsapp")
+  --messenger string    Messaging platform to use (default "whatsapp")
   --device string       Device database file path (default "device.db")
-  --log-level string    Log level: debug, info, warn, error (default "info")
-  -h, --help           Help for multichat
+  --log-level string    Logging level: debug, info, warn, error (default "info")
+  -h, --help           Show help information
 ```
 
-### MCP Server Configuration
+### MCP Client Configuration
 
-To use with an MCP client (like Claude Desktop, Cursor, or other AI assistants), add the following to your MCP configuration:
+#### 🖥️ Claude Desktop
 
-#### Example: `mcp_config.json`
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "whatsapp": {
+      "command": "/absolute/path/to/multichat",
+      "args": [
+        "--messenger", "whatsapp",
+        "--device", "/absolute/path/to/device.db",
+        "--log-level", "info"
+      ]
+    }
+  }
+}
+```
+
+#### 🎯 Cursor IDE
+
+**Location:** `~/.cursor/mcp.json` or workspace settings
+
+```json
+{
+  "mcpServers": {
+    "whatsapp": {
+      "command": "/absolute/path/to/multichat",
+      "args": ["--messenger", "whatsapp", "--device", "device.db"]
+    }
+  }
+}
+```
+
+#### 🔧 Generic MCP Client
 
 ```json
 {
   "mcpServers": {
     "whatsapp": {
       "command": "/path/to/multichat",
-      "args": [
-        "--messenger",
-        "whatsapp",
-        "--device",
-        "mydevice.db"
-      ]
+      "args": ["--messenger", "whatsapp", "--device", "mydevice.db"]
     }
   }
 }
 ```
 
-#### For Claude Desktop
+---
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+## 🔧 Available MCP Tools
+
+### 👤 `search_contacts`
+Find contacts by name or phone number.
 
 ```json
 {
-  "mcpServers": {
-    "whatsapp": {
-      "command": "/Users/yourusername/path/to/multichat",
-      "args": [
-        "--messenger",
-        "whatsapp",
-        "--device",
-        "/Users/yourusername/path/to/mydevice.db",
-        "--log-level",
-        "info"
-      ]
-    }
-  }
+  "query": "John Doe"
 }
 ```
 
-## MCP Operations
+### 💬 `list_messages`
+Retrieve messages with powerful filtering options.
 
-The server exposes the following MCP tools:
-
-### 1. `search_contacts`
-
-Search for contacts by name or phone number.
-
-**Parameters:**
-- `query` (string, required): Search term to match against contact names or phone numbers
-
-**Example:**
-```json
-{
-  "query": "John"
-}
-```
-
-### 2. `list_messages`
-
-Retrieve messages with optional filters and context.
-
-**Parameters:**
-- `after` (string, optional): ISO-8601 formatted date to only return messages after this date
-- `before` (string, optional): ISO-8601 formatted date to only return messages before this date
-- `sender_jid` (string, optional): Filter messages by sender JID
-- `chat_jid` (string, optional): Filter messages by chat JID
-- `query` (string, optional): Search term to filter messages by content
-- `limit` (integer, optional): Maximum number of messages to return (default: 20)
-- `page` (integer, optional): Page number for pagination (default: 0)
-
-**Example:**
 ```json
 {
   "chat_jid": "1234567890@s.whatsapp.net",
-  "limit": 50
-}
-```
-
-**Note:** Full message history retrieval requires implementing a custom message storage layer, as whatsmeow doesn't provide direct access to message history.
-
-### 3. `list_chats`
-
-List available chats with metadata.
-
-**Parameters:**
-- `limit` (integer, optional): Maximum number of chats to return (default: 20)
-- `page` (integer, optional): Page number for pagination (default: 0)
-
-**Example:**
-```json
-{
-  "limit": 10,
+  "after": "2024-01-01T00:00:00Z",
+  "before": "2024-12-31T23:59:59Z",
+  "query": "meeting",
+  "limit": 50,
   "page": 0
 }
 ```
 
-### 4. `get_chat`
-
-Get information about a specific chat.
-
 **Parameters:**
-- `chat_jid` (string, required): The JID of the chat to retrieve
+- `after` *(string, optional)*: ISO-8601 date - messages after this time
+- `before` *(string, optional)*: ISO-8601 date - messages before this time
+- `sender_jid` *(string, optional)*: Filter by sender
+- `chat_jid` *(string, optional)*: Filter by chat
+- `query` *(string, optional)*: Full-text search
+- `limit` *(integer, optional)*: Max results (default: 20)
+- `page` *(integer, optional)*: Page number (default: 0)
 
-**Example:**
+### 📋 `list_chats`
+Get all available chats with metadata.
+
+```json
+{
+  "limit": 20,
+  "page": 0
+}
+```
+
+### 🔍 `get_chat`
+Retrieve detailed information about a specific chat.
+
 ```json
 {
   "chat_jid": "1234567890@s.whatsapp.net"
 }
 ```
 
-### 5. `get_direct_chat_by_contact`
+### 📞 `get_direct_chat_by_contact`
+Find direct chat by phone number.
 
-Find a direct chat with a specific contact by phone number.
-
-**Parameters:**
-- `phone_number` (string, required): Phone number of the contact (with country code, no + or spaces)
-
-**Example:**
 ```json
 {
   "phone_number": "1234567890"
 }
 ```
 
-### 6. `get_contact_chats`
+**Note:** Use country code without `+` or spaces (e.g., `15551234567` for US)
 
+### 👥 `get_contact_chats`
 List all chats involving a specific contact.
 
-**Parameters:**
-- `contact_jid` (string, required): The JID of the contact
-
-**Example:**
 ```json
 {
   "contact_jid": "1234567890@s.whatsapp.net"
 }
 ```
 
-### 7. `send_message`
+### 📤 `send_message`
+Send a message to any contact or group.
 
-Send a WhatsApp message to a specified phone number or group JID.
-
-**Parameters:**
-- `recipient` (string, required): Phone number (with country code) or JID of the recipient
-- `message` (string, required): The message text to send
-
-**Example (phone number):**
+**Direct Message:**
 ```json
 {
   "recipient": "1234567890",
-  "message": "Hello from MCP!"
+  "message": "Hello from MultiChat MCP! 👋"
 }
 ```
 
-**Example (JID):**
+**Using JID:**
 ```json
 {
   "recipient": "1234567890@s.whatsapp.net",
-  "message": "Hello from MCP!"
+  "message": "Hey there!"
 }
 ```
 
-**Example (group):**
+**Group Message:**
 ```json
 {
   "recipient": "1234567890@g.us",
-  "message": "Hello group!"
+  "message": "Hello everyone! 🎉"
 }
 ```
 
-## Project Structure
+---
+
+## 🏗️ Architecture
+
+MultiChat MCP follows a clean, modular architecture designed for extensibility:
+
+```
+┌─────────────────────────────────────────┐
+│         MCP Client (Claude, etc)        │
+└────────────────┬────────────────────────┘
+                 │ MCP Protocol (stdio)
+┌────────────────▼────────────────────────┐
+│         MCP Server (server.go)          │
+└────────────────┬────────────────────────┘
+                 │ Messenger Interface
+┌────────────────▼────────────────────────┐
+│  Platform Implementations (modular)     │
+├─────────────────────────────────────────┤
+│  ✅ WhatsApp  │  🔜 Telegram  │  🔜 Signal │
+└─────────────────────────────────────────┘
+```
+
+### Project Structure
 
 ```
 multichatmcp/
-├── main.go                 # Main application entry point
+├── main.go                      # Entry point & CLI
 ├── internal/
-│   ├── messenger/          # Messenger interface and implementations
-│   │   ├── interface.go    # Messenger interface definition
-│   │   └── whatsapp/       # WhatsApp implementation
-│   │       └── whatsapp.go
-│   └── mcp/                # MCP server implementation
-│       └── server.go
-├── go.mod
-├── go.sum
-├── Makefile
-├── .gitignore
-└── README.md
+│   ├── messenger/
+│   │   ├── interface.go         # Messenger interface definition
+│   │   └── whatsapp/
+│   │       └── whatsapp.go      # WhatsApp implementation
+│   └── mcp/
+│       └── server.go            # MCP server implementation
+├── go.mod                       # Go dependencies
+├── Makefile                     # Build automation
+└── README.md                    # This file
 ```
 
-## Architecture
+### Key Design Principles
 
-The application follows a modular architecture:
+1. **Interface-Driven**: All platforms implement a common `Messenger` interface
+2. **Dependency Injection**: Platform implementations are injected into MCP server
+3. **Separation of Concerns**: CLI, MCP layer, and platform logic are isolated
+4. **Extensibility**: Adding new platforms requires minimal changes
 
-1. **Messenger Interface**: Defines a common interface that all messaging platforms must implement
-2. **Platform Implementations**: Each messaging platform (WhatsApp, future: Telegram, Signal, etc.) implements the Messenger interface
-3. **MCP Server**: Wraps the messenger implementation and exposes MCP tools
-4. **CLI**: Cobra-based CLI for configuration and startup
+---
 
-This design makes it easy to add support for new messaging platforms by implementing the `Messenger` interface.
+## 🧩 Adding New Messaging Platforms
 
-## Adding New Messengers
+Want to add Telegram, Signal, or another platform? Here's how:
 
-To add support for a new messaging platform:
+### Step 1: Implement the Interface
 
-1. Create a new package under `internal/messenger/<platform>/`
-2. Implement the `messenger.Messenger` interface
-3. Add the new messenger type to the CLI switch in `main.go`
-4. Update documentation
+Create `internal/messenger/<platform>/<platform>.go`:
 
-Example interface methods to implement:
-- `Connect(ctx context.Context) error`
-- `Disconnect() error`
-- `SearchContacts(ctx context.Context, query string) ([]Contact, error)`
-- `ListMessages(ctx context.Context, filter MessageFilter) ([]Message, error)`
-- `ListChats(ctx context.Context, limit, page int) ([]Chat, error)`
-- `GetChat(ctx context.Context, chatJID string) (*Chat, error)`
-- `GetDirectChatByContact(ctx context.Context, phoneNumber string) (*Chat, error)`
-- `GetContactChats(ctx context.Context, contactJID string) ([]Chat, error)`
-- `SendMessage(ctx context.Context, recipient, message string) error`
-- `IsConnected() bool`
+```go
+package platform
 
-## Limitations & Known Issues
+import (
+    "context"
+    "github.com/joao-costa/multichatmcp/internal/messenger"
+)
 
-1. **Message History**: WhatsApp's `whatsmeow` library doesn't provide direct access to message history. To implement full message retrieval, you would need to:
-   - Set up event handlers to capture incoming messages
-   - Store messages in a local database
-   - Query from your local database in the `ListMessages` implementation
+type PlatformMessenger struct {
+    // Your implementation
+}
 
-2. **Media Messages**: Currently only text messages are supported. Media support can be added by extending the implementation.
+func NewPlatformMessenger(config string) (messenger.Messenger, error) {
+    // Initialize your messenger
+}
 
-3. **Group Management**: Advanced group operations (create, manage members, etc.) are not yet implemented.
+// Implement all messenger.Messenger interface methods:
+// - Connect(ctx context.Context) error
+// - Disconnect() error
+// - SearchContacts(ctx context.Context, query string) ([]Contact, error)
+// - ListMessages(ctx context.Context, filter MessageFilter) ([]Message, error)
+// - ListChats(ctx context.Context, limit, page int) ([]Chat, error)
+// - GetChat(ctx context.Context, chatJID string) (*Chat, error)
+// - GetDirectChatByContact(ctx context.Context, phoneNumber string) (*Chat, error)
+// - GetContactChats(ctx context.Context, contactJID string) ([]Chat, error)
+// - SendMessage(ctx context.Context, recipient, message string) error
+// - IsConnected() bool
+```
 
-## Development
+### Step 2: Register in Main
+
+Add to the switch statement in `main.go`:
+
+```go
+case "telegram":
+    msg, err = telegram.NewTelegramMessenger(deviceDB)
+case "signal":
+    msg, err = signal.NewSignalMessenger(deviceDB)
+```
+
+### Step 3: Test & Document
+
+- Add tests for your implementation
+- Update README with platform-specific setup
+- Submit a PR! 🎉
+
+---
+
+## 🐛 Troubleshooting
+
+<details>
+<summary><strong>QR Code Not Appearing</strong></summary>
+
+**Solution:**
+```bash
+# Run with debug logging
+./multichat --messenger whatsapp --log-level debug
+
+# Ensure no other WhatsApp Web sessions are active
+# Try deleting device.db and restarting
+rm device.db
+./multichat --messenger whatsapp
+```
+</details>
+
+<details>
+<summary><strong>Connection Drops or Fails</strong></summary>
+
+**Checklist:**
+- ✅ Verify internet connectivity
+- ✅ Check firewall/proxy settings
+- ✅ Ensure WhatsApp is active on your phone
+- ✅ Try reconnecting: delete `device.db` and re-scan QR code
+</details>
+
+<details>
+<summary><strong>Database Locked Errors</strong></summary>
+
+**Solution:**
+```bash
+# Ensure no other instances are running
+pkill multichat
+
+# Check file permissions
+chmod 644 device.db
+
+# If issue persists, remove and recreate
+rm device.db
+```
+</details>
+
+<details>
+<summary><strong>MCP Client Can't Find Server</strong></summary>
+
+**Solution:**
+- Use **absolute paths** in configuration files
+- Verify the binary is executable: `chmod +x /path/to/multichat`
+- Check client logs for connection errors
+- Test standalone: `./multichat --messenger whatsapp --log-level debug`
+</details>
+
+---
+
+## ⚠️ Limitations & Known Issues
+
+### 📜 Message History
+WhatsApp's `whatsmeow` doesn't provide direct access to historical messages. To implement full history:
+
+1. Set up event handlers for incoming messages
+2. Store messages in a local database (SQLite, PostgreSQL, etc.)
+3. Query from your database in `ListMessages`
+
+**Example approach:**
+```go
+// Listen for new messages
+client.AddEventHandler(func(evt interface{}) {
+    if msg, ok := evt.(*events.Message); ok {
+        // Store in your database
+        db.SaveMessage(msg)
+    }
+})
+```
+
+### 🎬 Media Messages
+Currently only **text messages** are supported. Media support (images, videos, documents) can be added by:
+- Extending the `Message` struct
+- Implementing download handlers
+- Adding MCP tools for media retrieval
+
+### 👥 Advanced Group Features
+Not yet implemented:
+- Create groups
+- Add/remove members
+- Update group settings
+- Admin operations
+
+These can be added by extending the `Messenger` interface and platform implementations.
+
+---
+
+## 🔨 Development
 
 ### Running Tests
 
 ```bash
+# Run all tests
 go test ./...
+
+# Run with coverage
+go test -cover ./...
+
+# Run with verbose output
+go test -v ./...
 ```
 
-### Building for Production
+### Building
 
 ```bash
-# Build with optimizations
-make build-prod
+# Development build
+make build
 
-# Or directly with go
-go build -ldflags="-s -w" -o multichat
+# Production build (optimized)
+make build-prod
 
 # Cross-compile for all platforms
 make build-all
+
+# Install to GOPATH/bin
+make install
+
+# Clean build artifacts
+make clean
 ```
 
-## Troubleshooting
+### Available Make Targets
 
-### QR Code Not Appearing
+```bash
+make help           # Show all available targets
+make build          # Build for current platform
+make build-prod     # Build with optimizations (-ldflags="-s -w")
+make build-all      # Cross-compile (Linux, macOS, Windows)
+make install        # Install to GOPATH/bin
+make clean          # Remove build artifacts
+make test           # Run tests
+```
 
-- Ensure you're running with `--log-level debug` to see detailed logs
-- Check that no other WhatsApp Web/Desktop sessions are active
-- Delete the device database file and try again
+---
 
-### Connection Issues
+## 🤝 Contributing
 
-- Verify your internet connection
-- Check firewall settings
-- Ensure WhatsApp is working on your mobile device
+Contributions are **greatly appreciated**! Whether it's:
 
-### Database Locked Errors
+- 🐛 Bug reports
+- 💡 Feature requests
+- 📝 Documentation improvements
+- 🔧 Code contributions
+- 🌍 Platform integrations
 
-- Make sure only one instance of the application is running
-- Check file permissions on the device database
+### How to Contribute
 
-## License
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
 
-MIT License - See LICENSE file for details
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-## Contributing
+---
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## 📜 License
 
-## Acknowledgments
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-- [whatsmeow](https://github.com/tulir/whatsmeow) - WhatsApp Web multidevice API library
-- [mcp-go](https://github.com/modelcontextprotocol/go-mcp) - Model Context Protocol implementation for Go
-- [Cobra](https://github.com/spf13/cobra) - CLI framework
-- [zerolog](https://github.com/rs/zerolog) - Zero-allocation JSON logger
+### What does this mean?
 
+✅ Commercial use
+✅ Modification
+✅ Distribution
+✅ Private use
+
+---
+
+## 🙏 Acknowledgments
+
+This project stands on the shoulders of giants:
+
+- **[whatsmeow](https://github.com/tulir/whatsmeow)** - Excellent WhatsApp Web multidevice library by [Tulir Asokan](https://github.com/tulir)
+- **[mcp-go](https://github.com/modelcontextprotocol/go-mcp)** - Official Go implementation of MCP by [Mark3Labs](https://github.com/mark3labs)
+- **[Cobra](https://github.com/spf13/cobra)** - Powerful CLI framework by [spf13](https://github.com/spf13)
+- **[zerolog](https://github.com/rs/zerolog)** - Fast structured logger by [Olivier Poitrey](https://github.com/rs)
+
+Special thanks to:
+- The MCP community for the amazing protocol
+- All contributors and testers
+- You, for checking out this project! ⭐
+
+---
+
+## 📞 Support & Community
+
+- 📫 **Issues**: [GitHub Issues](https://github.com/joao-costa/multichatmcp/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/joao-costa/multichatmcp/discussions)
+- ⭐ **Star** this repo if you find it useful!
+
+---
+
+<div align="center">
+
+**Made with ❤️ by [João Costa](https://github.com/joao-costa)**
+
+[⬆ Back to Top](#-multichat-mcp-server)
+
+</div>
