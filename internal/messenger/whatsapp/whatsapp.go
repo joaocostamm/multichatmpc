@@ -3,9 +3,11 @@ package whatsapp
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
+	qrterminal "github.com/mdp/qrterminal/v3"
 	"github.com/rs/zerolog/log"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -68,8 +70,9 @@ func (w *WhatsAppMessenger) Connect(ctx context.Context) error {
 
 		for evt := range qrChan {
 			if evt.Event == "code" {
-				fmt.Printf("QR code: %s\n", evt.Code)
-				log.Info().Msg("Scan the QR code above to log in")
+				log.Info().Msg("QR code received, displaying for WhatsApp scan...")
+				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
+				log.Info().Msg("Scan the QR code above with WhatsApp to log in")
 			} else {
 				log.Info().Str("event", evt.Event).Msg("Login event")
 			}
