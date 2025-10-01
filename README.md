@@ -43,7 +43,7 @@ MultiChat MCP Server is a powerful Go-based implementation of the [Model Context
 
 ### 📱 Platform Support
 - ✅ **WhatsApp** - 7 operations (via [whatsmeow](https://github.com/tulir/whatsmeow))
-- 🔜 **Teams** - Custom operations for channels & meetings
+- ✅ **Teams** - 3 operations (via [go-teams-notify](https://github.com/atc0005/go-teams-notify))
 - 🔜 **Telegram** - Platform-specific tools (polls, forwards, etc.)
 - 🔜 **Signal** - Secure messaging operations
 - 🔜 **Discord** - Server/channel management
@@ -94,7 +94,9 @@ make build
 make install
 ```
 
-### First Run - WhatsApp Setup
+### First Run
+
+#### WhatsApp Setup
 
 ```bash
 ./multichat --messenger whatsapp --device mydevice.db --log-level debug
@@ -106,6 +108,17 @@ make install
 3. Scan the QR code
 4. Done! Your session is saved for future use
 
+#### Teams Setup
+
+```bash
+./multichat --messenger teams --webhook "https://your-webhook-url" --log-level debug
+```
+
+**🔗 Webhook Setup Steps:**
+1. Create a Power Automate Workflow webhook URL (see [Webhook Setup](#teams-webhook-setup))
+2. Run the server with your webhook URL
+3. The webhook URL can also be provided per-message for multi-channel support
+
 ---
 
 ## 📖 Documentation
@@ -116,8 +129,9 @@ make install
 ./multichat [flags]
 
 Flags:
-  --messenger string    Messaging platform to use (default "whatsapp")
-  --device string       Device database file path (default "device.db")
+  --messenger string    Messaging platform to use: whatsapp, teams (default "whatsapp")
+  --device string       Device database file path (for WhatsApp) (default "device.db")
+  --webhook string      Webhook URL (for Teams) (optional, can be provided per-message)
   --log-level string    Logging level: debug, info, warn, error (default "info")
   -h, --help           Show help information
 ```
@@ -138,6 +152,14 @@ Flags:
       "args": [
         "--messenger", "whatsapp",
         "--device", "/absolute/path/to/device.db",
+        "--log-level", "info"
+      ]
+    },
+    "teams": {
+      "command": "/absolute/path/to/multichat",
+      "args": [
+        "--messenger", "teams",
+        "--webhook", "https://your-teams-webhook-url",
         "--log-level", "info"
       ]
     }
@@ -175,7 +197,9 @@ Flags:
 
 ---
 
-## 🔧 Available MCP Tools (WhatsApp)
+## 🔧 Available MCP Tools
+
+### WhatsApp Tools
 
 When running with `--messenger whatsapp`, the following MCP tools are available:
 
@@ -279,6 +303,120 @@ Send a message to any contact or group.
 
 ---
 
+### Teams Tools
+
+When running with `--messenger teams`, the following MCP tools are available:
+
+#### 📤 `send_message`
+Send a simple message to a Teams channel or chat via webhook.
+
+```json
+{
+  "webhook_url": "https://your-webhook-url",
+  "message": "Hello from MultiChat MCP! 🚀",
+  "title": "Notification",
+  "color": "0078D4"
+}
+```
+
+**Parameters:**
+- `webhook_url` *(string, optional)*: Teams webhook URL. If not provided, uses the default webhook URL set at initialization
+- `message` *(string, required)*: The message text to send
+- `title` *(string, optional)*: Optional title for the message card
+- `color` *(string, optional)*: Theme color in hex format (e.g., '0078D4' for blue, 'FF0000' for red, '00FF00' for green)
+
+#### 📊 `send_rich_message`
+Send a rich message with title, text, color, and structured facts.
+
+```json
+{
+  "webhook_url": "https://your-webhook-url",
+  "title": "Deployment Status",
+  "text": "The deployment has completed successfully",
+  "color": "00FF00",
+  "facts": {
+    "Environment": "Production",
+    "Version": "v1.2.3",
+    "Status": "Success"
+  }
+}
+```
+
+**Parameters:**
+- `webhook_url` *(string, optional)*: Teams webhook URL
+- `title` *(string, optional)*: Title of the message card
+- `text` *(string, required)*: Main text content
+- `color` *(string, optional)*: Theme color in hex format
+- `facts` *(object, optional)*: Key-value pairs to display as structured facts
+
+#### ✅ `validate_webhook`
+Validate a Teams webhook URL to ensure it's properly formatted.
+
+```json
+{
+  "webhook_url": "https://your-webhook-url"
+}
+```
+
+**Returns:** `{"valid": true/false, "webhook_url": "...", "error": "..."}`
+
+---
+
+### Teams Webhook Setup
+
+To use Teams integration, you need to create a Power Automate Workflow webhook URL. Microsoft has deprecated the old O365 connectors (retiring October 2024), so you must use Power Automate workflows.
+
+#### Creating a Workflow Webhook (Power Automate)
+
+**Method 1: Using Teams Client - Workflows Context Option**
+
+1. Navigate to a channel or chat in Teams
+2. Select the ellipsis (⋯) on the channel or chat
+3. Select **Workflows**
+4. Type `when a webhook request` in the search
+5. Select **Post to a channel when a webhook request is received**
+6. Verify that **Microsoft Teams** is successfully enabled
+7. Select **Next**
+8. Select an appropriate **Team** from the dropdown
+9. Select an appropriate **Channel** from the dropdown
+10. Select **Create flow**
+11. Copy the new workflow URL (this is your webhook URL)
+12. Select **Done**
+
+**Method 2: Using Power Automate Web UI**
+
+1. Go to [https://make.powerautomate.com/](https://make.powerautomate.com/)
+2. Search for "Post to a channel when a webhook request is received" template
+3. Select or create a connection to Microsoft Teams
+4. Select **Create**
+5. Choose your Team and Channel
+6. Select **Create**
+7. Select **Edit** from the menu
+8. Select **When a Teams webhook request is received**
+9. Copy the **HTTP POST URL** (this is your webhook URL)
+
+**Method 3: Using Teams Workflows App**
+
+1. Open **Workflows** application in Teams
+2. Select **Create** at the top
+3. Choose **Notifications** on the left
+4. Select **Post to a channel when a webhook request is received**
+5. Verify **Microsoft Teams** is enabled
+6. Select **Next**
+7. Choose your Team and Channel
+8. Select **Create flow**
+9. Copy the workflow URL
+10. Select **Done**
+
+**Security Note:** By default, anyone with the webhook URL can post messages. Treat your webhook URL as a secret!
+
+**Valid Webhook URL Formats:**
+- Power Automate: `https://prod*.apiflow.microsoft.com/...`
+- O365 (deprecated): `https://outlook.office.com/webhook/...`
+- O365 (deprecated): `https://*.webhook.office.com/...`
+
+---
+
 ## 🏗️ Architecture
 
 MultiChat MCP follows a clean, modular architecture designed for extensibility with **messenger-specific operations**:
@@ -298,8 +436,8 @@ MultiChat MCP follows a clean, modular architecture designed for extensibility w
 │  Platform Implementations (modular)     │
 │  Each defines its OWN MCP operations    │
 ├─────────────────────────────────────────┤
-│  ✅ WhatsApp  │  🔜 Teams  │  🔜 Telegram │
-│  (7 tools)   │  (6 tools) │  (8 tools)   │
+│  ✅ WhatsApp  │  ✅ Teams  │  🔜 Telegram │
+│  (7 tools)   │  (3 tools) │  (8 tools)   │
 └─────────────────────────────────────────┘
 ```
 
@@ -311,9 +449,12 @@ multichatmcp/
 ├── internal/
 │   ├── messenger/
 │   │   ├── interface.go         # Minimal messenger interface
-│   │   └── whatsapp/
-│   │       ├── whatsapp.go      # WhatsApp implementation + MCP tools
-│   │       └── types.go         # WhatsApp-specific types
+│   │   ├── whatsapp/
+│   │   │   ├── whatsapp.go      # WhatsApp implementation + MCP tools
+│   │   │   └── types.go         # WhatsApp-specific types
+│   │   └── teams/
+│   │       ├── teams.go         # Teams implementation + MCP tools
+│   │       └── types.go         # Teams-specific types
 │   └── mcp/
 │       └── server.go            # Generic MCP server
 ├── go.mod                       # Go dependencies
@@ -336,7 +477,7 @@ This **messenger-specific operations** architecture provides several key advanta
 #### ✅ True Platform Independence
 Each messenger can expose operations that make sense for **that platform only**:
 - WhatsApp has JID-based operations (`get_chat`, `get_direct_chat_by_contact`)
-- Teams might have channel/meeting operations (`create_meeting`, `list_channels`)
+- Teams has webhook-based operations (`send_message`, `send_rich_message`, `validate_webhook`)
 - Telegram could have poll/forward operations (`create_poll`, `forward_message`)
 
 #### ✅ No Forced Abstractions
@@ -486,8 +627,8 @@ case "telegram":
 **WhatsApp** (7 operations):
 - `search_contacts`, `list_messages`, `list_chats`, `get_chat`, `get_direct_chat_by_contact`, `get_contact_chats`, `send_message`
 
-**Teams** (hypothetical 6 operations):
-- `list_teams`, `list_channels`, `list_members`, `send_channel_message`, `create_meeting`, `get_channel_info`
+**Teams** (3 operations):
+- `send_message`, `send_rich_message`, `validate_webhook`
 
 **Telegram** (hypothetical 8 operations):
 - `list_chats`, `send_message`, `create_poll`, `pin_message`, `forward_message`, `get_chat_history`, `search_global`, `get_user_info`
@@ -676,6 +817,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 This project stands on the shoulders of giants:
 
 - **[whatsmeow](https://github.com/tulir/whatsmeow)** - Excellent WhatsApp Web multidevice library by [Tulir Asokan](https://github.com/tulir)
+- **[go-teams-notify](https://github.com/atc0005/go-teams-notify)** - Microsoft Teams notification library by [atc0005](https://github.com/atc0005)
 - **[mcp-go](https://github.com/modelcontextprotocol/go-mcp)** - Official Go implementation of MCP by [Mark3Labs](https://github.com/mark3labs)
 - **[Cobra](https://github.com/spf13/cobra)** - Powerful CLI framework by [spf13](https://github.com/spf13)
 - **[zerolog](https://github.com/rs/zerolog)** - Fast structured logger by [Olivier Poitrey](https://github.com/rs)

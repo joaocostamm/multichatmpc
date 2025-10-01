@@ -13,12 +13,14 @@ import (
 
 	"github.com/joao-costa/multichatmcp/internal/mcp"
 	"github.com/joao-costa/multichatmcp/internal/messenger"
+	"github.com/joao-costa/multichatmcp/internal/messenger/teams"
 	"github.com/joao-costa/multichatmcp/internal/messenger/whatsapp"
 )
 
 var (
 	messengerType string
 	deviceDB      string
+	webhookURL    string
 	logLevel      string
 )
 
@@ -30,8 +32,9 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().StringVar(&messengerType, "messenger", "whatsapp", "Messenger type (whatsapp)")
-	rootCmd.Flags().StringVar(&deviceDB, "device", "device.db", "Device database file path")
+	rootCmd.Flags().StringVar(&messengerType, "messenger", "whatsapp", "Messenger type (whatsapp, teams)")
+	rootCmd.Flags().StringVar(&deviceDB, "device", "device.db", "Device database file path (for WhatsApp)")
+	rootCmd.Flags().StringVar(&webhookURL, "webhook", "", "Webhook URL (for Teams)")
 	rootCmd.Flags().StringVar(&logLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 }
 
@@ -53,6 +56,11 @@ func run(cmd *cobra.Command, args []string) error {
 		msg, err = whatsapp.NewWhatsAppMessenger(deviceDB)
 		if err != nil {
 			return fmt.Errorf("failed to create WhatsApp messenger: %w", err)
+		}
+	case "teams":
+		msg, err = teams.NewTeamsMessenger(webhookURL)
+		if err != nil {
+			return fmt.Errorf("failed to create Teams messenger: %w", err)
 		}
 	default:
 		return fmt.Errorf("unsupported messenger type: %s", messengerType)
