@@ -3,8 +3,10 @@ module github.com/joao-costa/multichatmcp
 go 1.25.1
 
 require (
+	github.com/atc0005/go-teams-notify/v2 v2.13.0
 	github.com/mark3labs/mcp-go v0.41.1
 	github.com/mattn/go-sqlite3 v1.14.32
+	github.com/mdp/qrterminal/v3 v3.2.1
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.1
 	go.mau.fi/whatsmeow v0.0.0-20250930215512-38f9aaa3ba7c
@@ -13,7 +15,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/atc0005/go-teams-notify/v2 v2.13.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/beeper/argo-go v1.1.2 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
@@ -25,7 +26,6 @@ require (
 	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mdp/qrterminal/v3 v3.2.1 // indirect
 	github.com/petermattis/goid v0.0.0-20250904145737-900bdf8bb490 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
